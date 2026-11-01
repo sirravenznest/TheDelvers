@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111a19">
+  <title>The Delvers — Card Dungeon</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Georgia, "Times New Roman", serif;
+      background: #101716;
+      color: #f3ead4;
+      font-synthesis: none;
+      --gold: #d7ad64;
+      --muted: #a9aa9b;
+      --panel: #1b2421;
+      --line: #39433a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 50% 30%, #26342d 0, transparent 48%),
+        linear-gradient(160deg, #121b19, #0d1212 75%);
+    }
+
+    button { font: inherit; }
+
+    .game {
+      width: min(100% - 32px, 1040px);
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--gold);
+      font-size: clamp(2rem, 6vw, 3.25rem);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .subtitle, .eyebrow {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-family: system-ui, sans-serif;
+      font-size: .82rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .run-stats {
+      color: var(--gold);
+      font-family: system-ui, sans-serif;
+      font-size: .9rem;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .battle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 24px 0;
+    }
+
+    .combatant {
+      position: relative;
+      min-height: 190px;
+      overflow: hidden;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #26322c, #18201e);
+    }
+
+    .combatant.enemy {
+      border-color: #69483c;
+      background: linear-gradient(145deg, #382a25, #211d1a);
+    }
+
+    .combatant h2 {
+      margin: 4px 0 15px;
+      font-size: clamp(1.3rem, 4vw, 1.8rem);
+    }
+
+    .icon {
+      position: absolute;
+      top: 28px;
+      right: 24px;
+      font-size: 3.2rem;
+      filter: drop-shadow(0 8px 8px #0008);
+    }
+
+    .health-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-family: system-ui, sans-serif;
+      font-size: .83rem;
+    }
+
+    .health-track {
+      height: 11px;
+      overflow: hidden;
+      border: 1px solid #ffffff24;
+      border-radius: 20px;
+      background: #090d0d;
+    }
+
+    .health-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #a33932, #e0734f);
+      transition: width .25s ease;
+    }
+
+    .player .health-fill { background: linear-gradient(90deg, #477b4a, #9ec56c); }
+
+    .intent {
+      min-height: 22px;
+      margin: 12px 0 0;
+      color: #f2bd8c;
+      font-family: system-ui, sans-serif;
+      font-size: .86rem;
+    }
+
+    .battle-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 20px;
+    }
+
+    .resource {
+      color: #d5c596;
+      font-family: system-ui, sans-serif;
+      font-size: .95rem;
+      font-weight: 700;
+    }
+
+    .resource span { color: #fff0bc; font-size: 1.15rem; }
+
+    .button {
+      min-height: 42px;
+      padding: 9px 16px;
+      border: 1px solid #997447;
+      border-radius: 7px;
+      background: #4a3926;
+      color: #fff0d0;
+      cursor: pointer;
+      transition: background .15s, transform .15s;
+    }
+
+    .button:hover:not(:disabled) { background: #665033; transform: translateY(-1px); }
+    .button:focus-visible, .card:focus-visible { outline: 3px solid #f4cf81; outline-offset: 3px; }
+    .button:disabled { cursor: not-allowed; opacity: .48; }
+
+    .section-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      color: var(--gold);
+      font-size: 1.25rem;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .section-heading p {
+      margin: 0;
+      color: var(--muted);
+      font-family: system-ui, sans-serif;
+      font-size: .82rem;
+    }
+
+    .hand {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      min-height: 176px;
+    }
+
+    .card {
+      position: relative;
+      display: flex;
+      min-height: 165px;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px 12px 12px;
+      border: 1px solid #78613c;
+      border-radius: 10px;
+      background: linear-gradient(155deg, #34352a, #20251f);
+      color: #f3ead4;
+      cursor: pointer;
+      text-align: center;
+      transition: transform .16s, border-color .16s, opacity .16s;
+    }
+
+    .card:hover:not(:disabled) { transform: translateY(-5px); border-color: #e1bc70; }
+    .card:disabled { cursor: not-allowed; opacity: .47; }
+    .card-cost {
+      position: absolute;
+      top: 8px;
+      left: 9px;
+      display: grid;
+      width: 25px;
+      height: 25px;
+      place-items: center;
+      border: 1px solid #aa8b52;
+      border-radius: 50%;
+      background: #131817;
+      color: #f5d17e;
+      font: 700 .88rem system-ui, sans-serif;
+    }
+
+    .card-art { margin: 10px 0 6px; font-size: 2rem; }
+    .card-name { font-size: 1.05rem; font-weight: 700; }
+    .card-description { margin-top: 6px; color: #c3c0ae; font: .78rem/1.35 system-ui, sans-serif; }
+
+    .battle-log {
+      min-height: 45px;
+      margin-top: 20px;
+      padding: 12px 15px;
+      border-left: 3px solid var(--gold);
+      border-radius: 0 6px 6px 0;
+      background: #1a211f;
+      color: #d8d1bd;
+      font: .88rem/1.5 system-ui, sans-serif;
+    }
+
+    .overlay {
+      position: fixed;
+      z-index: 2;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: #080c0bdd;
+    }
+
+    .dialog {
+      width: min(100%, 440px);
+      padding: 30px;
+      border: 1px solid #8a7047;
+      border-radius: 12px;
+      background: #202a25;
+      box-shadow: 0 20px 70px #0009;
+      text-align: center;
+    }
+
+    .dialog h2 { margin: 0 0 10px; color: var(--gold); font-size: 2rem; }
+    .dialog p { color: #d4d0c0; font: 1rem/1.6 system-ui, sans-serif; }
+    .dialog .button { margin-top: 8px; }
+    [hidden] { display: none !important; }
+
+    @media (max-width: 650px) {
+      .game { width: min(100% - 22px, 500px); padding-top: 18px; }
+      .battle { gap: 10px; margin: 16px 0; }
+      .combatant { min-height: 165px; padding: 14px; }
+      .icon { top: 23px; right: 14px; font-size: 2rem; opacity: .8; }
+      .hand { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .card { min-height: 145px; }
+      .battle-log { margin-top: 14px; }
+    }
+
+    @media (max-width: 390px) {
+      header { align-items: start; flex-direction: column; gap: 8px; }
+      .run-stats { text-align: left; }
+      .section-heading { align-items: start; flex-direction: column; gap: 4px; }
+      .battle-controls { align-items: start; flex-direction: column; }
+      .battle-controls .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <header>
+      <div>
+        <h1>The Delvers</h1>
+        <p class="subtitle">A pocket-sized card dungeon</p>
+      </div>
+      <div class="run-stats" aria-live="polite">
+        <div>Floor <span id="floor">1</span></div>
+        <div>Victories <span id="victories">0</span></div>
+      </div>
+    </header>
+
+    <section class="battle" aria-label="Battlefield">
+      <article class="combatant enemy">
+        <p class="eyebrow">Dungeon foe</p>
+        <span class="icon" id="enemy-icon" aria-hidden="true">🦇</span>
+        <h2 id="enemy-name">Cave Bat</h2>
+        <div class="health-label"><span>Health</span><span id="enemy-health">12 / 12</span></div>
+        <div class="health-track" role="progressbar" aria-label="Enemy health" aria-valuemin="0" aria-valuemax="12" aria-valuenow="12">
+          <div class="health-fill" id="enemy-health-bar"></div>
+        </div>
+        <p class="intent" id="enemy-intent">Preparing to strike for 4</p>
+      </article>
+
+      <article class="combatant player">
+        <p class="eyebrow">Your adventurer</p>
+        <span class="icon" aria-hidden="true">🧙</span>
+        <h2>Delver</h2>
+        <div class="health-label"><span>Health</span><span id="player-health">24 / 24</span></div>
+        <div class="health-track" role="progressbar" aria-label="Your health" aria-valuemin="0" aria-valuemax="24" aria-valuenow="24">
+          <div class="health-fill" id="player-health-bar"></div>
+        </div>
+        <p class="intent" id="block-status">Guard: 0</p>
+      </article>
+    </section>
+
+    <div class="battle-controls">
+      <div class="resource" aria-live="polite">✦ Focus: <span id="mana">3 / 3</span></div>
+      <button class="button" id="end-turn" type="button">End turn ↗</button>
+    </div>
+
+    <section aria-labelledby="hand-heading">
+      <div class="section-heading">
+        <h2 id="hand-heading">Your hand</h2>
+        <p>Play cards, then end your turn. Defeat foes to delve deeper.</p>
+      </div>
+      <div class="hand" id="hand" aria-label="Cards in your hand"></div>
+    </section>
+
+    <div class="battle-log" id="battle-log" role="status" aria-live="polite">A cave bat swoops out of the darkness. Make your move.</div>
+  </main>
+
+  <div class="overlay" id="result-overlay" hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="result-title">
+      <h2 id="result-title">The delve ends</h2>
+      <p id="result-message"></p>
+      <button class="button" id="restart" type="button">Begin a new delve</button>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const cardTypes = [
+        { name: "Quick Slash", icon: "⚔️", cost: 1, description: "Deal 4 damage.", kind: "damage", amount: 4 },
+        { name: "Ember Bolt", icon: "🔥", cost: 2, description: "Deal 7 damage.", kind: "damage", amount: 7 },
+        { name: "Field Rations", icon: "🍲", cost: 1, description: "Restore 4 health.", kind: "heal", amount: 4 },
+        { name: "Iron Guard", icon: "🛡️", cost: 1, description: "Block 5 damage this turn.", kind: "block", amount: 5 }
+      ];
+      const foes = [
+        { name: "Cave Bat", icon: "🦇", health: 12, attack: 4 },
+        { name: "Moss Goblin", icon: "👺", health: 17, attack: 5 },
+        { name: "Stone Warden", icon: "🗿", health: 23, attack: 7 },
+        { name: "Ember Drake", icon: "🐉", health: 30, attack: 8 }
+      ];
+      const $ = (id) => document.getElementById(id);
+      let state;
+
+      function newState() {
+        return {
+          health: 24, maxHealth: 24, block: 0, mana: 3, maxMana: 3,
+          floor: 1, victories: 0, enemy: null, hand: [], deck: [], gameOver: false
+        };
+      }
+
+      function drawCard() {
+        if (state.deck.length === 0) state.deck = cardTypes.map((_, index) => index).sort(() => Math.random() - 0.5);
+        state.hand.push(cardTypes[state.deck.pop()]);
+      }
+
+      function startFoe() {
+        const foe = foes[Math.min(state.floor - 1, foes.length - 1)];
+        state.enemy = { ...foe, maxHealth: foe.health };
+        state.block = 0;
+        state.mana = state.maxMana;
+        state.hand = [];
+        for (let index = 0; index < 4; index += 1) drawCard();
+        $("battle-log").textContent = `${foe.name} blocks the way. Choose your cards.`;
+        render();
+      }
+
+      function render() {
+        const foe = state.enemy;
+        $("floor").textContent = state.floor;
+        $("victories").textContent = state.victories;
+        $("enemy-name").textContent = foe.name;
+        $("enemy-icon").textContent = foe.icon;
+        $("enemy-health").textContent = `${foe.health} / ${foe.maxHealth}`;
+        $("player-health").textContent = `${state.health} / ${state.maxHealth}`;
+        $("mana").textContent = `${state.mana} / ${state.maxMana}`;
+        $("block-status").textContent = `Guard: ${state.block}`;
+        $("enemy-intent").textContent = `Preparing to strike for ${foe.attack}`;
+        const enemyBar = $("enemy-health-bar");
+        enemyBar.style.width = `${Math.max(0, foe.health / foe.maxHealth * 100)}%`;
+        enemyBar.parentElement.setAttribute("aria-valuemax", foe.maxHealth);
+        enemyBar.parentElement.setAttribute("aria-valuenow", foe.health);
+        const playerBar = $("player-health-bar");
+        playerBar.style.width = `${Math.max(0, state.health / state.maxHealth * 100)}%`;
+        playerBar.parentElement.setAttribute("aria-valuenow", state.health);
+        $("end-turn").disabled = state.gameOver;
+
+        const hand = $("hand");
+        hand.replaceChildren();
+        state.hand.forEach((card, index) => {
+          const button = document.createElement("button");
+          button.className = "card";
+          button.type = "button";
+          button.disabled = state.gameOver || state.mana < card.cost;
+          button.setAttribute("aria-label", `${card.name}, costs ${card.cost} focus. ${card.description}`);
+          button.innerHTML = `<span class="card-cost">${card.cost}</span><span class="card-art" aria-hidden="true">${card.icon}</span><span class="card-name">${card.name}</span><span class="card-description">${card.description}</span>`;
+          button.addEventListener("click", () => playCard(index));
+          hand.append(button);
+        });
+      }
+
+      function playCard(index) {
+        if (state.gameOver) return;
+        const card = state.hand[index];
+        if (!card || card.cost > state.mana) return;
+        state.mana -= card.cost;
+        if (card.kind === "damage") {
+          state.enemy.health = Math.max(0, state.enemy.health - card.amount);
+          $("battle-log").textContent = `${card.name} deals ${card.amount} damage to the ${state.enemy.name}.`;
+        } else if (card.kind === "heal") {
+          const healed = Math.min(card.amount, state.maxHealth - state.health);
+          state.health += healed;
+          $("battle-log").textContent = `You recover ${healed} health.`;
+        } else {
+          state.block += card.amount;
+          $("battle-log").textContent = `You brace for impact and gain ${card.amount} Guard.`;
+        }
+        state.hand.splice(index, 1);
+        if (state.enemy.health === 0) {
+          state.victories += 1;
+          state.floor += 1;
+          if (state.floor > 4) {
+            endGame(true);
+            return;
+          }
+          state.maxMana = Math.min(5, state.maxMana + 1);
+          state.health = Math.min(state.maxHealth, state.health + 3);
+          $("battle-log").textContent = `${state.enemy.name} falls! You recover 3 health and find a deeper passage.`;
+          render();
+          window.setTimeout(startFoe, 700);
+          return;
+        }
+        render();
+      }
+
+      function endTurn() {
+        if (state.gameOver) return;
+        const incoming = Math.max(0, state.enemy.attack - state.block);
+        state.health = Math.max(0, state.health - incoming);
+        state.block = 0;
+        if (state.health === 0) {
+          $("battle-log").textContent = `The ${state.enemy.name} deals ${incoming} damage. Your delve is over.`;
+          endGame(false);
+          return;
+        }
+        state.mana = state.maxMana;
+        drawCard();
+        $("battle-log").textContent = `The ${state.enemy.name} strikes for ${incoming}. Your turn begins; you draw a card.`;
+        render();
+      }
+
+      function endGame(won) {
+        state.gameOver = true;
+        $("result-title").textContent = won ? "Dungeon conquered!" : "The delve ends";
+        $("result-message").textContent = won
+          ? "You defeated all four guardians and claimed the dungeon."
+          : `You reached floor ${state.floor} and defeated ${state.victories} ${state.victories === 1 ? "foe" : "foes"}.`;
+        $("result-overlay").hidden = false;
+        $("restart").focus();
+        render();
+      }
+
+      $("end-turn").addEventListener("click", endTurn);
+      $("restart").addEventListener("click", () => {
+        state = newState();
+        $("result-overlay").hidden = true;
+        startFoe();
+        $("end-turn").focus();
+      });
+      state = newState();
+      startFoe();
+    })();
+  </script>
+</body>
+</html>
